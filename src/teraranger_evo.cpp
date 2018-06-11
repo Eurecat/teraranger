@@ -12,7 +12,26 @@ TerarangerEvo::TerarangerEvo()
   ns_ = ros::this_node::getNamespace();
   ns_ = ros::names::clean(ns_);
   ROS_INFO("node namespace: [%s]", ns_.c_str());
+
+  // msoler {
+  bool use_low_pass_filter_;
+  //low pass filter variables
+  double T; //sec
+  double dt; //ms
+  double x_;
+  double epsilon;
+
+  private_node_handle_.param<bool>("use_low_pass_filter", use_low_pass_filter_, false);
+  private_node_handle_.param<double>("T", T, 0.5);
+  private_node_handle_.param<double>("dt", dt, 0.03);
+  private_node_handle_.param<double>("x_", x_, 0);
+  private_node_handle_.param<double>("epsilon", epsilon, 0.0001);
+  // }
+
   private_node_handle_.param("frame_id", frame_id_, std::string("base_range"));
+
+
+
 
   //Publishers
   range_publisher_ = nh_.advertise<sensor_msgs::Range>("teraranger_evo", 2);
@@ -150,9 +169,20 @@ void TerarangerEvo::serialDataCallback(uint8_t single_character)
         final_range = float_range;
       }
 
+      if(use_low_pass_filter_)
+      {
+        x_ = lowPassFilter(final_range, x_, dt, T);
+        range_msg.range = x_;
+      }
+      else
+      {
+        range_msg.range = final_range;
+      }
+
       range_msg.header.stamp = ros::Time::now();
       range_msg.header.seq = seq_ctr++;
-      range_msg.range = final_range;
+
+
       range_msg.header.stamp = ros::Time::now();
       range_publisher_.publish(range_msg);
     }
@@ -181,6 +211,16 @@ void TerarangerEvo::spin()
     ros::spinOnce();
   }
 }
+
+double TerarangerEvo::lowPassFilter (double x, double y0, double dt, double T)   // Taken from http://en.wikipedia.org/wiki/Low-pass_filter infinite-impulse-response (IIR) single-pole low-pass filter.
+{
+  double res = y0 + (x - y0) * (dt/(dt+T));
+
+  if ((res*res) <= epsilon)
+    res = 0;
+  return res;
+}
+
 
 } // namespace teraranger
 
