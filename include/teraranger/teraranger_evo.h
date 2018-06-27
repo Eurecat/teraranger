@@ -38,6 +38,7 @@ class TerarangerEvo
 
     bool loadParameters();
     void setMode(const char *c, int length);
+    double lowPassFilter(double x, double y0, double dt, double T);
 
     ros::NodeHandle nh_;
     ros::Publisher range_publisher_;
@@ -49,6 +50,13 @@ class TerarangerEvo
     std::string frame_id_;
     std::string ns_;
     std::string sensor_type_;
+
+    //low pass filter variables
+    bool use_low_pass_filter_;
+    double T; //sec
+    double dt; //ms
+    double x_;
+    double epsilon;
 
 
     void spin();
